@@ -12,10 +12,21 @@ namespace HueLightController
 {
     class Program
     {
-        static void MakeRequest(String path, object controlThing, Method method) //TODO: Add params
+        //Config Settings
+        private static string username = "6tyjmwSeaKxyClM7c6Vvi0ySD2HsqSVRn5TmXWee"; //This is the username auto generated from the hue process.
+        private static string ipAdress = "192.168.1.2";
+
+        private static void MakeRequest(String category, String subControl, object controlThing, Method method)
         {
+            String action = "";
+            if (category == "groups" || category == "scenes") action = "action";
+            else if (category == "lights") action = "state";
+            else Console.WriteLine("Error: Line 24");
+
             var client = new RestClient();
-            client.BaseUrl = new Uri("http://192.168.1.2/api/6tyjmwSeaKxyClM7c6Vvi0ySD2HsqSVRn5TmXWee");
+            client.BaseUrl = new Uri("http://" + ipAdress + "/api/" + username);
+
+            String path = "/" + category + "/" + subControl + "/" + action;
 
             IRestRequest request = new RestRequest(path)
             {
@@ -26,28 +37,89 @@ namespace HueLightController
             client.Execute(request);
         }
 
+        //TODO: This needs to be implemented
+        private static String[] overrideDefaults(String dWhat, String dSub, String[] args)
+        {
+            String[] targetCommand = { dWhat, dSub };
+            String[] command = { "groups", "scenes", "lights" };
+            String[] subControls = { "1", "2", "3", "4" };
+            String[][] thing = {command, subControls};
+            for (int i = 0; i < thing.Length; i++)
+            {
+                for (int x = 0; x < thing[i].Length; x++)
+                {
+                    for (int a = 0; a < args.Length; a++)
+                    {
+                        if (args[a] == thing[i][x])
+                        {
+                            targetCommand[i] = args[a];
+                            if (i == thing.Length - 1) return targetCommand;
+                            else break;
+                        }
+                    }
+                }
+            }
+            return targetCommand;
+        }
+
         static void Main(string[] args)
-        { 
+        {
+            //Default Values
+            String dWhatDoIControl = "groups";
+            String dSubControl = "1";
+
             PutState lightState = new PutState();
 
             bool continueRunning = true;
 
             do
             {
+                Console.Write("HueCommand: ");
+                String input = Console.ReadLine().ToLower();
+                String[] arguments = input.Split(' ');
+
+                //TODO: This needs to be implimented
+                int something = 0;
+                String[] targetCommand = overrideDefaults(dWhatDoIControl, dSubControl, arguments);
+                for (int i = 0; i < targetCommand.Length; i++)
+                {
+                    for (int x = 0; x < arguments.Length; x++)
+                    {
+                        if (arguments[x] == targetCommand[i])
+                        {
+                            something = x + 1;
+                        }
+                    }
+                }
+                String whatToControl = targetCommand[0];
+                String subControl = targetCommand[1];
+
                 object thing = new Def();
                 IRestRequest request = new RestRequest();
 
-                Console.Write("HueCommand: ");
-                switch(Console.ReadLine().ToLower()){
+                switch(arguments[something]){
                     case "off":
                         lightState.on = false;
-                        MakeRequest("/lights/1/state", lightState, Method.PUT);
+                        thing = lightState;
                         break;
                     case "on":
                         lightState.on = true;
-                        MakeRequest("/lights/1/state", lightState, Method.PUT);
+                        thing = lightState;
+                        break;
+                    case "red":
+                    case "grenn":
+                    case "purple":
+                    case "white":
+                    case "blue":
+                        
+                        break;
+                    default:
+                        Console.WriteLine("Incorrect Syntax, Please Try Again.");
                         break;
                 }
+                //Console.WriteLine("What to control: " + whatToControl + "\n" +
+                //    "Subcontrol: " + subControl + "\n" + "Thing: " + thing.ToString() + "\n");
+                MakeRequest(whatToControl, subControl, thing, Method.PUT);
             }
             while (continueRunning);
 
@@ -67,6 +139,7 @@ namespace HueLightController
         }
     }
 }
+
 public class Def { }
 
 public class PutState
