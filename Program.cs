@@ -13,8 +13,8 @@ namespace HueLightController
     class Program
     {
         //Config Settings
-        private static string username = "6tyjmwSeaKxyClM7c6Vvi0ySD2HsqSVRn5TmXWee"; //This is the username auto generated from the hue process.
-        private static string ipAdress = "192.168.1.2";
+        static string username = MyCreds.username;
+        static string ipAdress = MyCreds.ipAdress;
 
         private static void MakeRequest(String category, String subControl, object controlThing, Method method)
         {
@@ -43,17 +43,17 @@ namespace HueLightController
             String[] targetCommand = { dWhat, dSub };
             String[] command = { "groups", "scenes", "lights" };
             String[] subControls = { "1", "2", "3", "4" };
-            String[][] thing = {command, subControls};
-            for (int i = 0; i < thing.Length; i++)
+            String[][] mainCommand = {command, subControls};
+            for (int i = 0; i < mainCommand.Length; i++)
             {
-                for (int x = 0; x < thing[i].Length; x++)
+                for (int x = 0; x < mainCommand[i].Length; x++)
                 {
                     for (int a = 0; a < args.Length; a++)
                     {
-                        if (args[a] == thing[i][x])
+                        if (args[a] == mainCommand[i][x])
                         {
                             targetCommand[i] = args[a];
-                            if (i == thing.Length - 1) return targetCommand;
+                            if (i == mainCommand.Length - 1) return targetCommand;
                             else break;
                         }
                     }
@@ -85,10 +85,7 @@ namespace HueLightController
                 {
                     for (int x = 0; x < arguments.Length; x++)
                     {
-                        if (arguments[x] == targetCommand[i])
-                        {
-                            something = x + 1;
-                        }
+                        if (arguments[x] == targetCommand[i]) something = x + 1;
                     }
                 }
                 String whatToControl = targetCommand[0];
@@ -107,7 +104,8 @@ namespace HueLightController
                         thing = lightState;
                         break;
                     case "red":
-                    case "grenn":
+                        
+                    case "green":
                     case "purple":
                     case "white":
                     case "blue":
