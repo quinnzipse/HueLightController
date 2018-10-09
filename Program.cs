@@ -69,6 +69,7 @@ namespace HueLightController
             String dSubControl = "1";
 
             PutState lightState = new PutState();
+            Action lightColor = new Action();
 
             bool continueRunning = true;
 
@@ -104,12 +105,40 @@ namespace HueLightController
                         thing = lightState;
                         break;
                     case "red":
-                        
+                        lightColor.on = true;
+                        lightColor.hue = 65535;
+                        lightColor.sat = 255;
+                        thing = lightColor;
+                        break;
+
                     case "green":
+                        lightColor.on = true;
+                        lightColor.hue = 65535; //TODO: Needs green color code
+                        lightColor.sat = 255;
+                        thing = lightColor;
+                        break;
+
                     case "purple":
+                        lightColor.on = true;
+                        lightColor.hue = 65535; //TODO: Needs purple color code
+                        lightColor.sat = 255;
+                        thing = lightColor;
+                        break;
+
                     case "white":
+                        lightColor.on = true;
+                        lightColor.hue = 65535;
+                        lightColor.sat = 0;
+                        thing = lightColor;
+                        break;
+
                     case "blue":
-                        
+                        lightColor.on = true;
+                        lightColor.hue = 65535; //TODO: Needs blue color code
+                        lightColor.sat = 255;
+                        thing = lightColor;
+                        break;
+
                         break;
                     default:
                         Console.WriteLine("Incorrect Syntax, Please Try Again.");
@@ -154,15 +183,8 @@ public class State
 public class Action
 {
     public bool on { get; set; }
-    public int bri { get; set; }
     public int hue { get; set; }
     public int sat { get; set; }
-    public string effect { get; set; }
-    [JsonProperty("xy")]
-    public List<double> xy { get; set; }
-    public int ct { get; set; }
-    public string alert { get; set; }
-    public string colormode { get; set; }
 }
 
 public class Id1
