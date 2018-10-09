@@ -113,14 +113,14 @@ namespace HueLightController
 
                     case "green":
                         lightColor.on = true;
-                        lightColor.hue = 65535; //TODO: Needs green color code
+                        lightColor.hue = 21845; //TODO: Needs green color code
                         lightColor.sat = 255;
                         thing = lightColor;
                         break;
 
                     case "purple":
                         lightColor.on = true;
-                        lightColor.hue = 65535; //TODO: Needs purple color code
+                        lightColor.hue = 54000; //TODO: Needs purple color code
                         lightColor.sat = 255;
                         thing = lightColor;
                         break;
@@ -134,7 +134,7 @@ namespace HueLightController
 
                     case "blue":
                         lightColor.on = true;
-                        lightColor.hue = 65535; //TODO: Needs blue color code
+                        lightColor.hue = 43690; //TODO: Needs blue color code
                         lightColor.sat = 255;
                         thing = lightColor;
                         break;
