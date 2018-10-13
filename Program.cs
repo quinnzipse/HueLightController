@@ -15,26 +15,35 @@ namespace HueLightController
         //Config Settings
         static string username = MyCreds.username;
         static string ipAdress = MyCreds.ipAdress;
+        static double HueMax = 255, userInputMax = 100; //this creates a 0-100 for user input and a 0-255 output for the Hue API
+        static AutoDim autoDim = new AutoDim();
 
-        private static void MakeRequest(String category, String subControl, object controlThing, Method method)
+        private static IRestResponse MakeRequest(String category, String subControl, object controlThing, Method method)
         {
-            String action = "";
-            if (category == "groups" || category == "scenes") action = "action";
+            String action = "action";
+            if (controlThing == null) action = "";
             else if (category == "lights") action = "state";
-            else Console.WriteLine("Error: Line 24");
 
             var client = new RestClient();
             client.BaseUrl = new Uri("http://" + ipAdress + "/api/" + username);
 
-            String path = "/" + category + "/" + subControl + "/" + action;
+            String path;
+            if (subControl != "") path = "/" + category + "/" + subControl + "/" + action;
+            else path = "/" + category + "/" + action;
 
             IRestRequest request = new RestRequest(path)
             {
                 Method = method
             };
 
-            request.AddParameter("application/json", JsonConvert.SerializeObject(controlThing), ParameterType.RequestBody);
-            client.Execute(request);
+            if(controlThing != null) request.AddParameter("application/json", JsonConvert.SerializeObject(controlThing), ParameterType.RequestBody);
+
+            return client.Execute(request);
+        }
+
+        public static int percentToHueBri(double a)
+        {
+            return (int)(HueMax * (a / userInputMax));
         }
 
         //TODO: This needs to be implemented
@@ -69,7 +78,8 @@ namespace HueLightController
             String dSubControl = "1";
 
             PutState lightState = new PutState();
-            Action lightColor = new Action();
+            Color lightColor = new Color();
+            Dim lightBrightness = new Dim();
 
             bool continueRunning = true;
 
@@ -113,14 +123,14 @@ namespace HueLightController
 
                     case "green":
                         lightColor.on = true;
-                        lightColor.hue = 21845; //TODO: Needs green color code
+                        lightColor.hue = 21845;
                         lightColor.sat = 255;
                         thing = lightColor;
                         break;
 
                     case "purple":
                         lightColor.on = true;
-                        lightColor.hue = 54000; //TODO: Needs purple color code
+                        lightColor.hue = 54000;
                         lightColor.sat = 255;
                         thing = lightColor;
                         break;
@@ -134,12 +144,61 @@ namespace HueLightController
 
                     case "blue":
                         lightColor.on = true;
-                        lightColor.hue = 43690; //TODO: Needs blue color code
+                        lightColor.hue = 43690;
                         lightColor.sat = 255;
                         thing = lightColor;
                         break;
 
+                    case "dim":
+                        lightBrightness.on = true;
+
+                        if (arguments[arguments.Length - 1].ToLower() == "dim")
+                        {
+                            IRestResponse response;
+                            if (whatToControl == "lights")
+                            {
+                                Console.WriteLine("This feature does not support the lights agrument yet.");
+                                continue;
+                            }
+                            //response = MakeRequest(whatToControl, "", null, Method.GET);
+                            response = MakeRequest(whatToControl, subControl, null, Method.GET);
+
+                            //Console.WriteLine(response.Content);
+
+                            Group responseObjectG = null;
+                            //Lights responseObjectL = null;
+                            if (whatToControl == "groups") responseObjectG = JsonConvert.DeserializeObject<Group>(response.Content);
+                            //else responseObjectL = JsonConvert.DeserializeObject<Lights>(response.Content);
+
+                            int brightness = 0;
+                            if(responseObjectG != null) brightness = responseObjectG.Action.Bri;
+                            //if (responseObjectL != null && arguments.Length == 3) Console.WriteLine(responseObjectL.lightID[Int16.Parse(arguments[arguments.Length - 2])]);
+                            //else if (responseObjectL != null) Console.WriteLine(responseObjectL.lightID[0];
+
+                            lightBrightness.bri = brightness - 40;
+                            thing = lightBrightness;
+                        }
+                        else
+                        {
+                            try {
+                                //dim to specified brightness
+                                int brightness = Int32.Parse(arguments[arguments.Length - 1]);
+
+                                if (brightness < 0 || brightness > 255) throw new Exception();
+                                else if (brightness < 100) brightness = percentToHueBri(brightness);
+
+                                lightBrightness.bri = brightness;
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine("Incorrect Syntax, Please Try Again.\n" +
+                                    "[Controller System] [ID] dim [% Brightness]\n");
+                                continue;
+                            }
+                        }
+                        thing = lightBrightness;
                         break;
+
                     default:
                         Console.WriteLine("Incorrect Syntax, Please Try Again.");
                         break;
@@ -149,168 +208,109 @@ namespace HueLightController
                 MakeRequest(whatToControl, subControl, thing, Method.PUT);
             }
             while (continueRunning);
-
-            //var response = client.Execute(request);
-
-            //RootObject obj = JsonConvert.DeserializeObject<RootObject>(response.Content);
-
-            //Console.WriteLine(response.Content + "\n\n");
-            //try
-            //{
-            //    Console.WriteLine( obj.groups.id1.name.ToString() + "\n");
-            //}
-            //catch(Exception e)
-            //{
-            //    Console.WriteLine(e.StackTrace.ToString()); 
-            //}
         }
     }
 }
-
 public class Def { }
+
+public class AutoDim { }
 
 public class PutState
 {
     public bool on { get; set; }
 }
 
-public class State
-{
-    public bool all_on { get; set; }
-    public bool any_on { get; set; }
-}
-
-public class Action
+public class Color
 {
     public bool on { get; set; }
     public int hue { get; set; }
     public int sat { get; set; }
 }
 
-public class Id1
-{
-    public string name { get; set; }
-    [JsonProperty("lights")]
-    public List<string> lights { get; set; }
-    public string type { get; set; }
-    [JsonProperty("state")]
-    public State state { get; set; }
-    public bool recycle { get; set; }
-    [JsonProperty("class")]
-    public string @class { get; set; }
-    [JsonProperty("action")]
-    public Action action { get; set; }
-}
-
-public class Action2
+public class Dim
 {
     public bool on { get; set; }
     public int bri { get; set; }
-    public int hue { get; set; }
-    public int sat { get; set; }
-    public string effect { get; set; }
-    [JsonProperty("xy")]
-    public List<double> xy { get; set; }
-    public int ct { get; set; }
-    public string alert { get; set; }
-    public string colormode { get; set; }
 }
 
-public class Id2
+//Anything under this was autogenerated at app.quicktype.io
+
+public partial class HueResponse
 {
-    public string name { get; set; }
     [JsonProperty("lights")]
-    public List<string> lights { get; set; }
-    public string type { get; set; }
-    [JsonProperty("state")]
-    public State state { get; set; }
-    public bool recycle { get; set; }
-    [JsonProperty("action")]
-    public Action2 action { get; set; }
-}
+    public Lights Lights { get; set; }
 
-public class Stream
-{
-    public string proxymode { get; set; }
-    public string proxynode { get; set; }
-    public bool active { get; set; }
-    public object owner { get; set; }
-}
-
-public class Locations
-{
-    [JsonProperty("4")]
-    public List<double> loc { get; set; }
-}
-
-public class Action3
-{
-    public bool on { get; set; }
-    public int bri { get; set; }
-    public int hue { get; set; }
-    public int sat { get; set; }
-    public string effect { get; set; }
-    [JsonProperty("xy")]
-    public List<double> xy { get; set; }
-    public int ct { get; set; }
-    public string alert { get; set; }
-    public string colormode { get; set; }
-}
-
-public class Id3
-{
-    public string name { get; set; }
-    [JsonProperty("lights")]
-    public List<string> lights { get; set; }
-    public string type { get; set; }
-    [JsonProperty("state")]
-    public State state { get; set; }
-    public bool recycle { get; set; }
-    public string @class { get; set; }
-    [JsonProperty("stream")]
-    public Stream stream { get; set; }
-    [JsonProperty("locations")]
-    public Locations locations { get; set; }
-    [JsonProperty("action")]
-    public Action3 action { get; set; }
-}
-
-public class Action4
-{
-    public bool on { get; set; }
-    public string alert { get; set; }
-}
-
-public class Id4
-{
-    public string name { get; set; }
-    [JsonProperty("lights")]
-    public List<object> lights { get; set; }
-    public string type { get; set; }
-    [JsonProperty("state")]
-    public State state { get; set; }
-    public bool recycle { get; set; }
-    public string @class { get; set; }
-    [JsonProperty("action")]
-    public Action4 action { get; set; }
-}
-
-public class Groups
-{
-    [JsonProperty("1")]
-    public Id1 id1 { get; set; }
-    [JsonProperty("2")]
-    public Id2 id2 { get; set; }
-    [JsonProperty("3")]
-    public Id3 id3 { get; set; }
-    [JsonProperty("4")]
-    public Id4 id4 { get; set; }
-}
-
-public class RootObject
-{
     [JsonProperty("groups")]
-    public Groups groups { get; set; }
+    public List<Group> Groups { get; set; }
 }
 
+public partial class Group
+{
+    [JsonProperty("name")]
+    public string Name { get; set; }
 
+    [JsonProperty("lights")]
+    public long[] Lights { get; set; }
+
+    [JsonProperty("state")]
+    public State State { get; set; }
+
+    [JsonProperty("action")]
+    public Action Action { get; set; }
+}
+
+//This class is used by groups and lights
+public partial class Action
+{
+    [JsonProperty("on")]
+    public bool On { get; set; }
+
+    [JsonProperty("bri")]
+    public int Bri { get; set; }
+
+    [JsonProperty("hue")]
+    public long Hue { get; set; }
+
+    [JsonProperty("sat")]
+    public long Sat { get; set; }
+
+    [JsonProperty("reachable", NullValueHandling = NullValueHandling.Ignore)]
+    public bool? Reachable { get; set; }
+}
+
+//used by only groups
+public partial class State
+{
+    [JsonProperty("all_on")]
+    public bool AllOn { get; set; }
+
+    [JsonProperty("any_on")]
+    public bool AnyOn { get; set; }
+}
+
+public partial class Lights
+{
+    [JsonProperty("lightID")]
+    public long[] lightID { get; set; }
+
+    [JsonProperty("uniqueid")]
+    public string Uniqueid { get; set; }
+
+    [JsonProperty("swversion")]
+    public string Swversion { get; set; }
+}
+
+public partial class Light
+{
+    [JsonProperty("state")]
+    public Action State { get; set; }
+
+    [JsonProperty("type")]
+    public string Type { get; set; }
+
+    [JsonProperty("name")]
+    public string Name { get; set; }
+
+    [JsonProperty("modelid")]
+    public string Modelid { get; set; }
+}
